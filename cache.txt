@@ -1,3 +1,3 @@
-60 W 57th St, New York, NY 10019, Stati Uniti
--73.97711
-40.7640716
+Union Square, New York, NY 10019, Stati Uniti
+-73.9901626
+40.7359091

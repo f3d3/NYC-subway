@@ -21,7 +21,10 @@ def closest(lst, K):
 def findDestination(trip_id1, trip_id2, input_train, flag):
 
 	df_trips = pd.read_csv('trips.txt')
-	df_trips = df_trips.query("route_id==@input_train[0] and direction_id==@flag")[['trip_id','trip_headsign']]
+
+	if (type(input_train)!=bool) and (type(flag)!=bool):
+		df_trips = df_trips.query("route_id==@input_train[0] and direction_id==@flag")[['trip_id','trip_headsign']]
+
 	df_trips.drop_duplicates(keep='first', inplace=True)
 	#print(df_trips)
 
@@ -43,11 +46,13 @@ def findDestination(trip_id1, trip_id2, input_train, flag):
 			found = re.search('_(.+?)_', trip_id_static).group(1)
 			if (str(closest_trip1) in found):
 				finaldestination1 = row['trip_headsign']
+				direction1 = row['trip_id'][-4]
 			if (str(closest_trip2) in found):				
 				finaldestination2 = row['trip_headsign']
+				direction2 = row['trip_id'][-4]
 		except AttributeError:
 			raise Exception
-	return finaldestination1, finaldestination2
+	return finaldestination1, finaldestination2, direction1, direction2
 
 
 def main(input_station, input_train, direction):
@@ -80,28 +85,6 @@ def main(input_station, input_train, direction):
 
 	# Request parameters
 	headers = {'x-api-key': APIKey}
-
-
-
-	# f = feedsToCheck[0]
-	# # Get the train data from the MTA
-	# try:
-	# 	response = requests.get(f, headers=headers, timeout=30)
-	# except:
-	# 	return 'fail'
-
-	# # Parse the protocol buffer that is returned
-	# feed = gtfs_realtime_pb2.FeedMessage()
-
-	# try:
-	# 	feed.ParseFromString(response.content)
-	# except:
-	# 	return 'fail'
-	# # Get a list of all the train data
-	# subway_feed = protobuf_to_dict(feed)  # subway_feed is a dictionary
-	# realtime_data = subway_feed['entity']  # train_data is a list
-
-
 	
 	if (direction == 'U'):
 		direction = 'N'
@@ -109,6 +92,9 @@ def main(input_station, input_train, direction):
 	elif (direction == 'D'):
 		direction = 'S'
 		flag = 1
+	elif (not direction):
+		direction = False
+		flag = False
 	else:
 		raise Exception
 
@@ -118,25 +104,11 @@ def main(input_station, input_train, direction):
 	#df_stations = df_stations.query("stop_name=='{0}'".format(input_station))['stop_id']
 
 	df_stations.columns = ['index', 'stop_id']
+
 	stations = [ word for word in df_stations.values if len(word) >= 4 ]
-	stations = [ word for word in stations if word.endswith(direction) ]
 
-
-	# NQRWfeednum = '16' # Feed number for N,Q,R,W trains
-	# BDFMfeednum = '21' # Feed number for B,D,F,M trains
-	# S123456feednum = '1' # Feed number for S,1,2,3,4,5,6 trains
-	# ACEHfeednum = '26' # Feed number for A,C,E,H trains
-	# Lfeednum = '2' # Feed number for the L train
-	# Gfeednum = '31' # Feed number for the G train
-	# JZfeednum = '36' # Feed number for the JZ trains
-	# Sevenfeednum = '51' # Feed number for the 7 train
-	# SIRfeednum = '11' # Feed number for the Staten Island Railway
-
-	# # List of feeds (in order) that we'll check for arrival times.
-	# # The order of this list will be optimized based on the
-	# # feeds most likely to have the trains in which we are interested
-	# feedsToCheck = [NQRWfeednum, BDFMfeednum, S123456feednum, ACEHfeednum,
-	# 				Lfeednum, Gfeednum, JZfeednum, Sevenfeednum, SIRfeednum]
+	if type(direction)!=bool:
+		stations = [ word for word in stations if word.endswith(direction) ]
 
 	row_list = []
 
@@ -148,13 +120,6 @@ def main(input_station, input_train, direction):
 #	while True:
 
 	for i in feedsToCheck:
-
-		# URL = "http://datamine.mta.info/mta_esi.php?key=" + api_key + "&feed_id="+str(i)
-	  
-		# data = requests.get(url = URL, allow_redirects=True) 
-
-		# feed = gtfs_realtime_pb2.FeedMessage()
-		# feed.ParseFromString(data.content)
 
 		# Get the train data from the MTA
 		try:
@@ -180,7 +145,7 @@ def main(input_station, input_train, direction):
 				if ent.trip_update.trip.HasField('route_id'):
 					trip_id= ent.trip_update.trip.trip_id
 					trainname = ent.trip_update.trip.route_id
-					if (trainname==input_train[0]):
+					if (type(direction)==bool and (not input_train[0])) or (trainname==input_train[0]):
 						for j in range(0, len(ent.trip_update.stop_time_update)):
 							station_codename = ent.trip_update.stop_time_update[j].stop_id
 							station_arrival_time = ent.trip_update.stop_time_update[j].arrival.time
@@ -194,7 +159,10 @@ def main(input_station, input_train, direction):
 	df = pd.DataFrame(row_list, columns=columns)
 
 	#os.system('cls' if os.name == 'nt' else 'clear')
-	print("\nUTC Time: " + str(datetime.now(timezone.utc).strftime("%H:%M:%S")) + " -- Nearest station: " + str(input_station) + " -- Train choosen: " + input_train[0]+"\n\n")
+	if type(direction)!=bool:
+		print("\nUTC Time: " + str(datetime.now(timezone.utc).strftime("%H:%M:%S")) + " -- Nearest station: " + str(input_station) + " -- Train choosen: " + input_train[0]+"\n\n")
+	else:
+		print("\nUTC Time: " + str(datetime.now(timezone.utc).strftime("%H:%M:%S")) + " -- Nearest station: " + str(input_station) + "\n\n")
 
 	#print(stations)
 	df_final = df.loc[df['Station'].isin(stations)]
@@ -209,7 +177,9 @@ def main(input_station, input_train, direction):
 	#df_final.drop_duplicates(subset='Train', keep='first', inplace=True)
 	''' SELECTED UPCOMING TRAINS '''
 	df_final.drop_duplicates(subset='Time', keep='first', inplace=True)
-	df_final = df_final.loc[df_final['Train'].isin(input_train)]
+
+	if type(direction)!=bool:
+		df_final = df_final.loc[df_final['Train'].isin(input_train)]
 
 	df_final = df_final[['Trip_ID','Train','Station','Time']].sort_values('Time')
 	#print(df_final)
@@ -218,7 +188,7 @@ def main(input_station, input_train, direction):
 
 	trip_id1 = df_final.iloc[0, 0][0:6]
 	trip_id2 = df_final.iloc[1, 0][0:6]
-	destination1, destination2 = findDestination(trip_id1, trip_id2, input_train, flag)
+	destination1, destination2, direction1, direction2 = findDestination(trip_id1, trip_id2, input_train, flag)
 
 
 
@@ -243,4 +213,4 @@ def main(input_station, input_train, direction):
 	#time.sleep(30.0 - ((time.time() - starttime) % 30.0))
 
 	#return "Train " + df_final.iloc[0, 1] + " - " + str(waiting_time_1) + " min", "Train " + df_final.iloc[1, 1] + " - " + str(waiting_time_2) + " min"
-	return df_final.iloc[0, 1], destination1, str(waiting_time_1) + " min", df_final.iloc[1, 1], destination2, str(waiting_time_2) + " min"
+	return df_final.iloc[0, 1], destination1, str(waiting_time_1) + " min", direction1, df_final.iloc[1, 1], destination2, str(waiting_time_2) + " min", direction2

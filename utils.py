@@ -3,7 +3,7 @@ import re
 from geopy import Nominatim
 
 def coordinates(address):
-	nom = Nominatim()
+	nom = Nominatim(user_agent="f3d3.96@live.it")
 	location = nom.geocode(address)
 	coordinates = np.array([location.longitude, location.latitude])
 	return coordinates
@@ -64,7 +64,7 @@ def toLongName(direction):
 	if string_found('Hts', direction):
 		direction = direction.replace('Hts', 'Heigths')
 	#PARKWAY
-	if string_found('PKwy', direction):
+	if string_found('Pkwy', direction):
 		direction = direction.replace('Pkwy', 'Parkway')
 	#ROAD
 	if string_found('Rd', direction):
