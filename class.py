@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
 	my_location = '60 W 57th St, New York, NY 10019, Stati Uniti' #PROBLEM WITH UNION SQUARE !? WHY
 
-	#Caching system to lower the number of coordinates requests
+	#Caching system to reduce the number of coordinates requests
 	if (os.path.isfile('cache.txt')):
 		f = open("cache.txt")
 		line = f.read().splitlines()
