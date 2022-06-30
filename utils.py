@@ -3,9 +3,9 @@ import re
 from geopy import Nominatim
 
 def coordinates(address):
-	nom = Nominatim(user_agent="f3d3.96@live.it")
-	location = nom.geocode(address)
-	coordinates = np.array([location.longitude, location.latitude])
+	locator = Nominatim(user_agent='myGeocoder')
+	location = locator.geocode(address)
+	coordinates = np.array([location.latitude, location.longitude])
 	return coordinates
 	#return location.longitude, location.latitude
 

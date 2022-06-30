@@ -3,38 +3,25 @@ import pandas as pd
 import utils, re
 
 def fcs(my_location):
-	df_stations = pd.read_csv('info_subway_stations.csv', dtype=str)
-	df_stations = df_stations[['NAME','the_geom','LINE']]
-
-
-	df_stations['the_geom'] = df_stations['the_geom'].str[7:].str.rstrip(')')
-	#print(df_stations)
-
-
-	station_coordinates = df_stations.the_geom.str.split(expand=True)
-	station_coordinates.columns = [['Lat', 'Long']]
-	#print(station_coordinates)
-
-	min = 100000
-	for i in range(len(station_coordinates.index)):
-		prod = np.sqrt((my_location[0]-float(station_coordinates.iloc[i,0]))**2 + (my_location[1]-float(station_coordinates.iloc[i,1]))**2)
-		if (prod < min):
-			min = prod
-			min_index = i
-
-	closest_station = str(df_stations.iloc[min_index,0])
 	
-	idx = df_stations.index[df_stations['NAME'] == closest_station].tolist()
-	
-	closest_lines = ''
-	for i in idx:
-		#print(df_stations.iloc[i,2])
-		line = (str(df_stations.iloc[i,2])+" ").replace("-"," ").replace(' Express', '')
-		closest_lines = closest_lines + line
+	df_stations = pd.read_csv('stops.txt')
 
-	closest_lines = ''.join(set(closest_lines))
-	closest_lines = closest_lines.replace(" ", "")
-	#closest_lines = str(df_stations.iloc[min_index,2]).replace("-"," ").replace('Express', '')
+	# find station with minimum distance to the specified location
+	distances = np.sqrt((my_location[0]-df_stations['stop_lat'])**2 + (my_location[1]-df_stations['stop_lon'])**2)
+	closest_station = df_stations.loc[np.argmin(distances),'stop_name']
 
-	closest_station = utils.remove_ordinal(closest_station)
-	return closest_station, closest_lines
+
+	idx = df_stations.index[df_stations['stop_name'] == closest_station].tolist()
+	lst = df_stations.loc[idx,'stop_id']
+
+
+	df_stop_times = pd.read_csv('stop_times.txt')
+
+	closest_lines = df_stop_times.query('stop_id in @lst')
+
+	closest_trains = [x.split('..')[0] for x in closest_lines['trip_id']]
+	closest_trains = list(set([x.split('_')[-1] for x in closest_trains]))
+
+	# closest_station = utils.remove_ordinal(closest_station)
+
+	return closest_station, closest_trains

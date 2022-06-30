@@ -18,12 +18,12 @@ def closest(lst, K):
 	return lst[min(range(len(lst)), key = lambda i: abs(lst[i]-K))] 
 
 
-def findDestination(trip_id1, trip_id2, input_train, flag):
+def findDestination(trip_id1, trip_id2, input_train, boolean_direction):
 
 	df_trips = pd.read_csv('trips.txt')
 
-	if (type(input_train)!=bool) and (type(flag)!=bool):
-		df_trips = df_trips.query("route_id==@input_train[0] and direction_id==@flag")[['trip_id','trip_headsign']]
+	if (type(input_train)!=bool) and (type(boolean_direction)!=bool):
+		df_trips = df_trips.query("route_id==@input_train[0] and direction_id==@boolean_direction")[['trip_id','trip_headsign']]
 
 	df_trips.drop_duplicates(keep='first', inplace=True)
 	#print(df_trips)
@@ -55,70 +55,56 @@ def findDestination(trip_id1, trip_id2, input_train, flag):
 	return finaldestination1, finaldestination2, direction1, direction2
 
 
-def main(input_station, input_train, direction):
+def main(input_station, input_train, input_direction):
 
-	#os.system('cls' if os.name == 'nt' else 'clear')
-
-
-#	api_key = 'ymFcaLS9JBabZieClasw2XzdXnedgfE8QxBTUED0'
 	APIKey="ymFcaLS9JBabZieClasw2XzdXnedgfE8QxBTUED0"
-	
-	# Subway Lines
-	BDFMfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm'  # B,D,F,M
-	ACEHfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace'  # A,C,E,H
-	OneTwoThreefeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs'  # 1,2,3,4,5,6,7
-	Gfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g'  # G
-	NQRWfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw'  # N,Q,R,W
-	JZfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz'  # J,Z
-	Lfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l' # L
-	SIRfeed = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si' # SIR (Staten Island Railway)
 
-	#Add your feeds here
-	feedsToCheck = [BDFMfeed, ACEHfeed, OneTwoThreefeed, Gfeed, NQRWfeed, JZfeed, Lfeed, SIRfeed]
-	feedScores = dict.fromkeys(feedsToCheck, 0)
-	
-	uptownTimes = []
-	downtownTimes = []
-	uptownTrainIDs = []
-	downtownTrainIDs = []
-	route_id = ""
+	subwayDict =	{
+		"BDFM"   : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm",  # B,D,F,M
+		"ACEH"   : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace",   # A,C,E,H
+		"1234567": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",       # 1,2,3,4,5,6,7
+		"G"      : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",     # G
+		"NQRW"   : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw",  # N,Q,R,W
+		"JZ"     : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",    # J,Z
+		"L"      : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",     # L
+		"SIR"    : "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si"     # SIR (Staten Island Railway)
+	}
 
-	# Request parameters
+	trainsToShow = 2
+
+	# if no train has been choosen, iterate over all train feeds, otherwise pick the correct one to save time
+	if type(input_train)==bool and type(input_direction)==bool:
+		feedsToCheck = subwayDict.values()
+	else:
+		feedsToCheck = [value for key, value in subwayDict.items() if input_train.lower() in key.lower()]
+
+	# request parameters
 	headers = {'x-api-key': APIKey}
 	
-	if (direction == 'U'):
+	if (input_direction == 'U'):
 		direction = 'N'
-		flag = 0
-	elif (direction == 'D'):
+		boolean_direction = 0
+	elif (input_direction == 'D'):
 		direction = 'S'
-		flag = 1
-	elif (not direction):
+		boolean_direction = 1
+	elif (not input_direction):
 		direction = False
-		flag = False
+		boolean_direction = False
 	else:
 		raise Exception
 
 	df_stations = pd.read_csv('stops.txt')
 
-	df_stations = df_stations[df_stations['stop_name'].str.contains(input_station)]['stop_id']
-	#df_stations = df_stations.query("stop_name=='{0}'".format(input_station))['stop_id']
-
-	df_stations.columns = ['index', 'stop_id']
-
-	stations = [ word for word in df_stations.values if len(word) >= 4 ]
+	df_stations = df_stations[df_stations['stop_name']==input_station]['stop_id']
 
 	if type(direction)!=bool:
-		stations = [ word for word in stations if word.endswith(direction) ]
+		stations = [ word for word in df_stations.values if len(word) >= 4 and word.endswith(direction) ]
+	else:
+		stations = [ word for word in df_stations.values if len(word) >= 4]
+
 
 	row_list = []
-
 	
-	time_format = "%H:%M:%S"
-	#os.system('cls' if os.name == 'nt' else 'clear')
-	starttime=time.time()
-	
-#	while True:
-
 	for i in feedsToCheck:
 
 		# Get the train data from the MTA
@@ -134,83 +120,65 @@ def main(input_station, input_train, direction):
 			feed.ParseFromString(response.content)
 		except:
 			return 'fail'
-		# # Get a list of all the train data
+
+ 		# # Get a list of all the train data
 		# subway_feed = protobuf_to_dict(feed)  # subway_feed is a dictionary
 		# realtime_data = subway_feed['entity']  # train_data is a list
+		# realtime_data_df = pd.json_normalize(realtime_data)
 
+		# if (type(direction)==bool and (not input_train[0])) or (trainname==input_train[0]):
+		# 	realtime_data_df = realtime_data_df[pd.notna(realtime_data_df['trip_update.trip.trip_id']) & pd.notna(realtime_data_df['trip_update.trip.route_id'])]
 
+		# realtime_data_df = realtime_data_df.dropna(axis='columns', how='all')
 		
+		# #realtime_data_df.set_index(['id','trip_update.trip.trip_id','trip_update.trip.start_time','trip_update.trip.start_date','trip_update.trip.route_id']).trip_update.stop_time_update.apply(pd.Series).stack().reset_index(['id','trip_update.trip.trip_id','trip_update.trip.start_time','trip_update.trip.start_date','trip_update.trip.route_id'], name='trip_update.stop_time_update')
+		# names = ['id','trip_update.trip.trip_id','trip_update.trip.start_time','trip_update.trip.start_date','trip_update.trip.route_id']
+		# idx = pd.MultiIndex.from_tuples(realtime_data_df[names].values.tolist(), names=names)
+		# realtime_data_df2 = pd.DataFrame(realtime_data_df.trip_update.stop_time_update.tolist(), idx).stack().reset_index(names, name='trip_update.stop_time_update')
+
 		for ent in feed.entity:
 			if ent.HasField('trip_update'):
 				if ent.trip_update.trip.HasField('route_id'):
-					trip_id= ent.trip_update.trip.trip_id
 					trainname = ent.trip_update.trip.route_id
-					if (type(direction)==bool and (not input_train[0])) or (trainname==input_train[0]):
+					if (type(input_train)==bool and type(direction)==bool) or (type(input_train)!=bool and trainname==input_train):
 						for j in range(0, len(ent.trip_update.stop_time_update)):
-							station_codename = ent.trip_update.stop_time_update[j].stop_id
-							station_arrival_time = ent.trip_update.stop_time_update[j].arrival.time
+							if ent.trip_update.stop_time_update[j].stop_id in stations:
+								trip_id = ent.trip_update.trip.trip_id
+								station_codename = ent.trip_update.stop_time_update[j].stop_id
+								station_arrival_time = ent.trip_update.stop_time_update[j].arrival.time
+								row_list.append({'Trip_ID':trip_id, 'Train': trainname, 'Station': station_codename, 'Time': station_arrival_time})
 
-							dict1 = {}
-							dict1.update({'Trip_ID':trip_id, 'Train': trainname, 'Station': station_codename, 'Time': station_arrival_time}) 
-							row_list.append(dict1)
 
+	df = pd.DataFrame(row_list)
 
-	columns = {'Trip_ID', 'Train', 'Station', 'Time'} 
-	df = pd.DataFrame(row_list, columns=columns)
-
-	#os.system('cls' if os.name == 'nt' else 'clear')
 	if type(direction)!=bool:
 		print("\nUTC Time: " + str(datetime.now(timezone.utc).strftime("%H:%M:%S")) + " -- Nearest station: " + str(input_station) + " -- Train choosen: " + input_train[0]+"\n\n")
 	else:
 		print("\nUTC Time: " + str(datetime.now(timezone.utc).strftime("%H:%M:%S")) + " -- Nearest station: " + str(input_station) + "\n\n")
 
-	#print(stations)
-	df_final = df.loc[df['Station'].isin(stations)]
-
-	offset = 120 * 60 #minuti*secondi
+	# only keep the choosen number of trains with scheduled arrival in the next hour
+	offset = 3600
 	t = int(time.time())
-	df_final = df_final[(t <= df_final['Time'].astype(int)) & (df_final['Time'].astype(int) <= t+offset)]
+	df_final = df[(t <= df['Time'].astype(int)) & (df['Time'].astype(int) <= t+offset)].sort_values('Time')
+	df_final = df_final[0:trainsToShow]
 
-	
+	trains = [x.split('_')[0] for x in df_final['Trip_ID']]
 
-	''' ALL UPCOMING TRAINS '''
-	#df_final.drop_duplicates(subset='Train', keep='first', inplace=True)
-	''' SELECTED UPCOMING TRAINS '''
-	df_final.drop_duplicates(subset='Time', keep='first', inplace=True)
+	destination1, destination2, direction1, direction2 = findDestination(trains[0], trains[1], input_train, boolean_direction)
 
-	if type(direction)!=bool:
-		df_final = df_final.loc[df_final['Train'].isin(input_train)]
+	scheduled_minute = []
+	waiting_time = []
+	for i in range (0,trainsToShow):
+		scheduled_minute.append(int(datetime.utcfromtimestamp(int(df_final['Time'].values[i])).strftime("%M")))
+		waiting_time.append(scheduled_minute[i]-int(datetime.now(timezone.utc).strftime("%M")))
 
-	df_final = df_final[['Trip_ID','Train','Station','Time']].sort_values('Time')
-	#print(df_final)
-	#print('\n')
-
-
-	trip_id1 = df_final.iloc[0, 0][0:6]
-	trip_id2 = df_final.iloc[1, 0][0:6]
-	destination1, destination2, direction1, direction2 = findDestination(trip_id1, trip_id2, input_train, flag)
-
-
-
-
-	min1=int(datetime.utcfromtimestamp(int(df_final.iloc[0, 3])).strftime("%M"))
-	min2=int(datetime.utcfromtimestamp(int(df_final.iloc[1, 3])).strftime("%M"))
-
-	waiting_time_1 = min1-int(datetime.now(timezone.utc).strftime("%M"))
-	waiting_time_2 = min2-int(datetime.now(timezone.utc).strftime("%M"))
-
-	if (waiting_time_1 < 0):
-		waiting_time_1 = waiting_time_1 + 60
-	if (waiting_time_2 < 0):
-		waiting_time_2 = waiting_time_2 + 60
-
+	# waiting_time = [i + 60 if i < 0 else i for i in waiting_time] ### Why should there be negative values?
 
 	print("*** Upcoming Trains ***\n")
-	print("Train " + df_final.iloc[0, 1] + " - " + str(waiting_time_1) + " min")
-	print("Train " + df_final.iloc[1, 1] + " - " + str(waiting_time_2) + " min\n")
+	for i in range (0,trainsToShow):
+		print("Train " + df_final['Train'].values[i] + " - " + str(waiting_time[i]) + " min\n")
 
 	#waiting 30s before updating the timings
 	#time.sleep(30.0 - ((time.time() - starttime) % 30.0))
 
-	#return "Train " + df_final.iloc[0, 1] + " - " + str(waiting_time_1) + " min", "Train " + df_final.iloc[1, 1] + " - " + str(waiting_time_2) + " min"
-	return df_final.iloc[0, 1], destination1, str(waiting_time_1) + " min", direction1, df_final.iloc[1, 1], destination2, str(waiting_time_2) + " min", direction2
+	return df_final['Train'].values[0], destination1, str(waiting_time[0]) + " min", direction1, df_final['Train'].values[1], destination2, str(waiting_time[1]) + " min", direction2
