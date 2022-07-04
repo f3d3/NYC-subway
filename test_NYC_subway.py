@@ -95,7 +95,7 @@ def main(input_station, input_train, input_direction):
 
 	df_stations = pd.read_csv('stops.txt')
 
-	df_stations = df_stations[df_stations['stop_name']==input_station]['stop_id']
+	df_stations = df_stations[df_stations['stop_name'].str.contains(input_station)]['stop_id']
 
 	if type(direction)!=bool:
 		stations = [ word for word in df_stations.values if len(word) >= 4 and word.endswith(direction) ]
@@ -163,6 +163,10 @@ def main(input_station, input_train, input_direction):
 	df_final = df_final[0:trainsToShow]
 
 	trains = [x.split('_')[0] for x in df_final['Trip_ID']]
+
+	#df_trips = pd.read_csv('trips.txt')
+	#print(df_final['Trip_ID'].tolist())
+	#dff = df_trips[df_trips['trip_id'].str.contains('|'.join(df_final['Trip_ID'].tolist()))]
 
 	destination1, destination2, direction1, direction2 = findDestination(trains[0], trains[1], input_train, boolean_direction)
 
